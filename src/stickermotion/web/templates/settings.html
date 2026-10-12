@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Налаштування - StickerMotion{% endblock %}
+{% block main %}
+<h1>Налаштування</h1>
+<p class="lede">Лише перегляд. Платформи підключаються змінними оточення на сервері, токени тут не показуються.</p>
+
+{% set tg = overview.telegram %}
+<section class="panel settings">
+  <div class="pub-head">
+    <h2>Telegram</h2>
+    {% if tg.configured and not tg.error %}<span class="badge pub-published">Підключено</span>
+    {% elif tg.configured %}<span class="badge pub-error">Помилка</span>
+    {% else %}<span class="badge">Не налаштовано</span>{% endif %}
+  </div>
+  {% if not tg.configured %}
+  <div class="note">Бракує {{ tg.missing|join(", ") }}.</div>
+  {% endif %}
+  {% if tg.error %}<div class="alert" role="alert"><strong>Перевірка не вдалася</strong>{{ tg.error }}</div>{% endif %}
+  <dl class="facts">
+    <div><dt>Бот</dt><dd>{% if tg.bot %}@{{ tg.bot }}{% else %}-{% endif %}</dd></div>
+    <div><dt>Власник пака</dt><dd>{{ tg.owner_id if tg.owner_id is not none else "-" }}</dd></div>
+    <div><dt>Назва пака</dt><dd>{{ tg.title }}</dd></div>
+    <div><dt>Стікерпак</dt><dd>{% if tg.pack_url %}<a href="{{ tg.pack_url }}" target="_blank" rel="noopener noreferrer">{{ tg.pack }}</a>{% else %}{{ tg.slug }}_by_…{% endif %}</dd></div>
+    <div><dt>Пак емодзі</dt><dd>{% if tg.emoji_pack_url %}<a href="{{ tg.emoji_pack_url }}" target="_blank" rel="noopener noreferrer">{{ tg.emoji_pack }}</a>{% else %}-{% endif %}</dd></div>
+  </dl>
+  <p class="muted small">Якщо публікація пише, що власник не знайдений, напишіть боту /start з акаунта власника.</p>
+</section>
+
+{% set dc = overview.discord %}
+<section class="panel settings">
+  <div class="pub-head">
+    <h2>Discord</h2>
+    {% if dc.configured and not dc.error %}<span class="badge pub-published">Підключено</span>
+    {% elif dc.configured %}<span class="badge pub-error">Помилка</span>
+    {% else %}<span class="badge">Не налаштовано</span>{% endif %}
+  </div>
+  {% if not dc.configured %}
+  <div class="note">Бракує {{ dc.missing|join(", ") }}.</div>
+  {% endif %}
+  {% if dc.error %}<div class="alert" role="alert"><strong>Перевірка не вдалася</strong>{{ dc.error }}</div>{% endif %}
+  <dl class="facts">
+    <div><dt>Сервер</dt><dd>{{ dc.guild or dc.guild_id or "-" }}</dd></div>
+    <div><dt>Рівень бусту</dt><dd>{{ dc.tier if dc.tier is defined else "-" }}</dd></div>
+    <div><dt>Анімовані емодзі</dt><dd>{% if dc.emoji_slots %}{{ dc.emoji_slots[0] }} з {{ dc.emoji_slots[1] }}{% else %}-{% endif %}</dd></div>
+    <div><dt>Стікери</dt><dd>{% if dc.sticker_slots %}{{ dc.sticker_slots[0] }} з {{ dc.sticker_slots[1] }}{% else %}-{% endif %}</dd></div>
+  </dl>
+</section>
+
+<section class="panel settings">
+  <div class="pub-head">
+    <h2>Twitch</h2>
+    <span class="badge">Вручну</span>
+  </div>
+  <p class="muted small">API для емоутів немає. На сторінці стікера кнопка «Підготувати для Twitch» дає архів з інструкцією.</p>
+  <dl class="facts">
+    <div><dt>Канал</dt><dd>{{ overview.twitch.channel or "-" }}</dd></div>
+    <div><dt>Сторінка емоутів</dt><dd><a href="{{ overview.twitch.url }}" target="_blank" rel="noopener noreferrer">кабінет автора</a></dd></div>
+  </dl>
+</section>
+{% endblock %}

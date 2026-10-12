@@ -1,0 +1,85 @@
+{# Publish block of the result page. #}
+<section class="panel" id="publish" aria-labelledby="publish-title">
+  <h2 id="publish-title">Опублікувати</h2>
+  <p class="muted small">Одним натисканням стікер потрапляє у ваш пак Telegram і на сервер Discord. Повторна публікація не створює дублікат.</p>
+
+  {% for item in channels %}
+  {% set pub = item.publication %}
+  <div class="pub" data-channel="{{ item.channel.value }}">
+    <div class="pub-head">
+      <h3>{{ item.title }}{% if item.optional %} <span class="muted small">опційно</span>{% endif %}</h3>
+      <span class="badge pub-{{ pub.status }}">{{ item.label }}</span>
+    </div>
+
+    {% if pub.status == "published" %}
+    <p class="pub-link small">
+      {% if pub.url %}<a href="{{ pub.url }}" target="_blank" rel="noopener noreferrer">{{ pub.url }}</a>{% endif %}
+      {% if pub.published_at %}<span class="muted">, {{ pub.published_at|date }}</span>{% endif %}
+      {% if pub.name and item.needs_name %}<span class="muted">, ім'я {{ pub.name }}</span>{% endif %}
+    </p>
+    {% endif %}
+    {% if pub.error %}
+    <div class="alert pub-error" role="alert"><strong>Не вдалося опублікувати</strong>{{ pub.error }}</div>
+    {% endif %}
+
+    {% if not item.configured %}
+    <div class="note pub-missing">Не налаштовано: бракує {{ item.missing|join(", ") }} у змінних оточення сервера.</div>
+    {% elif not item.has_file %}
+    <div class="note">Немає файлу для цієї платформи. Перегенеруйте стікер.</div>
+    {% elif pub.status == "publishing" %}
+    <p class="muted small"><span class="spinner" aria-hidden="true"></span> Публікуємо…</p>
+    {% else %}
+    <form method="post" action="/s/{{ sticker.id }}/publish/{{ item.channel.value }}" class="pub-form">
+      <input type="hidden" name="{{ csrf_field }}" value="{{ csrf }}">
+      <div class="pub-fields">
+        {% if item.needs_name %}
+        <label class="field">
+          <span>Ім'я</span>
+          <input type="text" name="name" value="{{ item.name }}" maxlength="{{ item.name_max }}"
+            pattern="[A-Za-z0-9_]{2,{{ item.name_max }}}" autocomplete="off" spellcheck="false"
+            title="Латиниця, цифри і _, від 2 до {{ item.name_max }} символів">
+        </label>
+        {% endif %}
+        {% if item.needs_emoji %}
+        <label class="field field-emoji">
+          <span>{% if item.channel.value == "discord_sticker" %}Тег-емодзі{% else %}Емодзі{% endif %}</span>
+          <input type="text" name="emoji" value="{{ item.emoji }}" maxlength="60" autocomplete="off">
+        </label>
+        {% endif %}
+      </div>
+      {% if item.channel.value == "telegram_sticker" %}
+      <label class="check"><input type="checkbox" name="also_emoji" value="1"> Також додати в пак кастомних емодзі</label>
+      {% endif %}
+      <div class="actions">
+        <button class="btn {% if pub.status == 'published' %}btn-quiet{% else %}btn-primary{% endif %}" type="submit">
+          {% if pub.status == "published" %}Опублікувати ще раз{% elif pub.status == "error" %}Повторити{% else %}Опублікувати{% endif %}
+        </button>
+      </div>
+    </form>
+    {% if pub.status == "published" %}
+    <form method="post" action="/s/{{ sticker.id }}/unpublish/{{ item.channel.value }}" class="pub-remove"
+      data-confirm="Прибрати стікер з цієї платформи?">
+      <input type="hidden" name="{{ csrf_field }}" value="{{ csrf }}">
+      <button class="btn btn-quiet btn-danger small" type="submit">Прибрати з платформи</button>
+    </form>
+    {% endif %}
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  <div class="pub" data-channel="twitch">
+    <div class="pub-head">
+      <h3>Twitch, емоут</h3>
+      <span class="badge">Вручну</span>
+    </div>
+    {% if twitch.files %}
+    <p class="muted small">У Twitch немає API для емоутів. Архів містить файли 28, 56, 112 для ручного режиму, файл для авто-режиму й коротку інструкцію.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="/s/{{ sticker.id }}/twitch.zip" download>Підготувати для Twitch</a>
+      <a class="btn btn-quiet" href="{{ twitch.url }}" target="_blank" rel="noopener noreferrer">Сторінка емоутів</a>
+    </div>
+    {% else %}
+    <div class="note">Немає файлів для Twitch. Перегенеруйте стікер.</div>
+    {% endif %}
+  </div>
+</section>

@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex, nofollow">
+<title>{% block title %}StickerMotion{% endblock %}</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="preload" href="/static/onest-cyrillic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/app.css">
+<script src="/static/app.js" defer></script>
+</head>
+<body>
+{% block header %}
+<header class="top">
+  <a class="brand" href="/">
+    <span class="brand-mark" aria-hidden="true">{% include "_mark.svg" %}</span>
+    StickerMotion
+  </a>
+  <nav class="nav" aria-label="Розділи">
+    <a href="/" {% if path == "/" %}aria-current="page"{% endif %}>Новий</a>
+    <a href="/history" {% if path == "/history" %}aria-current="page"{% endif %}>Історія</a>
+    <a href="/settings" {% if path == "/settings" %}aria-current="page"{% endif %}>Налаштування</a>
+    <form method="post" action="/logout">
+      <input type="hidden" name="{{ csrf_field }}" value="{{ csrf }}">
+      <button type="submit">Вийти</button>
+    </form>
+  </nav>
+</header>
+{% endblock %}
+<main>
+{% block main %}{% endblock %}
+</main>
+</body>
+</html>

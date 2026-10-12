@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Вхід - StickerMotion{% endblock %}
+{% block header %}{% endblock %}
+{% block main %}
+<div class="login">
+  <span class="brand">
+    <span class="brand-mark" aria-hidden="true">{% include "_mark.svg" %}</span>
+    StickerMotion
+  </span>
+  <h1>Вхід</h1>
+  <p class="lede">Анімовані стікери й емоути з PNG персонажа.</p>
+  {% if error %}<div class="alert" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/login">
+    <input type="hidden" name="{{ csrf_field }}" value="{{ csrf }}">
+    <label for="password">Пароль</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required autofocus>
+    <button class="btn btn-primary btn-block" type="submit">Увійти</button>
+  </form>
+</div>
+{% endblock %}

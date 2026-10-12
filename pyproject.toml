@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "stickermotion"
+version = "0.1.0"
+description = "Turns a raster image into animated stickers and emotes for Twitch, Discord, Telegram and OBS."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "Pillow>=10.0",
+    "numpy>=1.26",
+    "pydantic>=2.5",
+    "typer>=0.12",
+    # Web UI
+    "fastapi>=0.115",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.9",
+    "itsdangerous>=2.1",
+    "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+    "httpx>=0.27",
+]
+# Optional rembg cut for the AI engine (`stickermotion animate --cut rembg`); the default
+# chroma key needs no extra. The Replicate client uses the standard library only.
+rembg = [
+    "rembg[cpu]>=2.0.60",
+]
+
+[project.scripts]
+stickermotion = "stickermotion.cli:app"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/stickermotion"]
+artifacts = ["src/stickermotion/web/templates/*", "src/stickermotion/web/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-m 'not slow'"
+markers = ["slow: full render matrix through the CLI (minutes); run with pytest -m slow"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests", "scripts", "."]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "N", "SIM"]

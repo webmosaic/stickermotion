@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Історія - StickerMotion{% endblock %}
+{% block main %}
+<h1>Історія</h1>
+<dl class="spend">
+  <div><dt>Витрачено всього</dt><dd>{{ budget.total|usd }}</dd></div>
+  <div><dt>Сьогодні з {{ budget.daily|usd }}</dt><dd>{{ budget.today|usd }}</dd></div>
+</dl>
+{% if items %}
+<ul class="history">
+  {% for sticker, thumb, label in items %}
+  <li>
+    <a class="row" href="/s/{{ sticker.id }}">
+      <span class="thumb checker-bg"><img src="{{ thumb }}" alt="" loading="lazy"></span>
+      <span>
+        <span class="title">{{ sticker.filename }}</span>
+        <span class="desc">{{ sticker.text or "Опис ще не готовий" }}</span>
+      </span>
+      <span class="side">
+        {{ sticker.created_at|date }}<br>
+        {{ sticker.cost_usd|usd }}<br>
+        <span class="badge {{ sticker.status }}">{{ label }}</span>
+      </span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="panel empty">
+  <div class="drop-icon">{% include "_upload_icon.svg" %}</div>
+  <h2>Тут з'являться ваші стікери</h2>
+  <p class="muted">Кожен стікер зберігається з описом, файлами для всіх платформ і вартістю.</p>
+  <div class="actions actions-center"><a class="btn btn-primary" href="/">Зробити перший стікер</a></div>
+</div>
+{% endif %}
+{% endblock %}

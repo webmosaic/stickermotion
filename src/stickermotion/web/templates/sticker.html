@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+{% block title %}{{ sticker.filename }} - StickerMotion{% endblock %}
+{% block main %}
+{% set state = sticker.status %}
+{% if state in ("describing", "describe_queued") %}{% set stage = 2 %}
+{% elif sticker.active %}{% set stage = 3 %}
+{% elif result %}{% set stage = 4 %}
+{% else %}{% set stage = 2 %}{% endif %}
+{% include "_steps.html" %}
+
+<div class="sticker-head">
+  <div class="thumb checker-bg"><img src="/s/{{ sticker.id }}/input.png" alt="Персонаж"></div>
+  <div>
+    <h1>{{ sticker.filename }}</h1>
+    <div class="muted small">{{ sticker.created_at|date }}{% if sticker.cost_usd %}, витрачено {{ sticker.cost_usd|usd }}{% endif %}</div>
+  </div>
+</div>
+
+<div data-poll="{% if sticker.busy %}/s/{{ sticker.id }}/status{% endif %}" data-state="{{ state }}">
+
+{% if sticker.error %}
+<div class="alert" role="alert">
+  <strong>{% if state == "interrupted" %}Генерацію перервано{% elif state == "error" %}Не вдалося{% else %}Зверніть увагу{% endif %}</strong>
+  {{ sticker.error }}
+</div>
+{% endif %}
+
+{% if state == "describe_queued" %}
+<section class="panel" aria-live="polite">
+  <h2><span class="spinner" aria-hidden="true"></span> У черзі на опис</h2>
+  <p class="muted">Запити до моделі йдуть по одному, щоб не впиратися в ліміт частоти. Опис почнеться, щойно звільниться черга.</p>
+</section>
+
+{% elif state == "describing" %}
+<section class="panel" aria-live="polite">
+  <h2><span class="spinner" aria-hidden="true"></span> Описуємо дію</h2>
+  <p class="muted">Модель дивиться на персонажа й пропонує природний рух. Зазвичай 5-15 секунд, це безкоштовно.</p>
+</section>
+
+{% elif sticker.active %}
+<section class="panel" aria-live="polite">
+  <h2>Генеруємо стікер</h2>
+  <p class="muted">Сторінку можна закрити: генерація йде на сервері, стікер з'явиться в історії.</p>
+  <ol class="progress">
+    {% set order = ["queued", "generating", "cutting", "exporting"] %}
+    {% set current = order.index(state) %}
+    {% for key, title, hint in steps %}
+    {% set index = loop.index %}
+    <li class="{% if index < current %}done{% elif index == current %}current{% endif %}">
+      <span class="dot" aria-hidden="true"></span>
+      <div><strong>{{ title }}</strong>
+        <p>{% if state == "queued" and index == 1 %}У черзі, чекає завершення попередньої генерації{% else %}{{ hint }}{% endif %}</p></div>
+    </li>
+    {% endfor %}
+  </ol>
+  <details>
+    <summary>Опис для генерації</summary>
+    <p class="prompt-used">{{ sticker.text }}</p>
+  </details>
+</section>
+
+{% else %}
+
+{% if choose %}
+<section class="panel" id="variants" aria-label="Варіанти">
+  <h2>Виберіть варіант</h2>
+  <p class="muted">Той самий опис, різний seed. «Вибрати» готує всі файли з цього руху, це безкоштовно. Невибрані ролики лишаються нижче, їх можна взяти пізніше.</p>
+  <div class="variants">
+    {% for v in choose %}
+    <figure class="variant">
+      <div class="variant-stage checker-bg">
+        {% if v.preview %}<img src="/s/{{ sticker.id }}/raw/{{ v.id }}/preview.webp" alt="Варіант {{ v.variant or loop.index }}">{% else %}<span class="muted small">Без превʼю</span>{% endif %}
+      </div>
+      <figcaption>
+        <strong>Варіант {{ v.variant or loop.index }}</strong>
+        <span class="muted small">seed {{ v.seed if v.seed is not none else "-" }}</span>
+        <form method="post" action="/s/{{ sticker.id }}/raw/{{ v.id }}/use">
+          <input type="hidden" name="{{ csrf_field }}" value="{{ csrf }}">
+          <button class="btn btn-primary btn-block" type="submit">Вибрати</button>
+        </form>
+      </figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if result %}
+<section class="stage-wrap" aria-label="Результат">
+  <div class="stage" data-bg="dark" data-stage>
+    {% if result.hero %}
+    <video data-hero src="/s/{{ sticker.id }}/files/{{ result.hero }}" data-fallback="/s/{{ sticker.id }}/preview.webp"
+      autoplay loop muted playsinline aria-label="Анімований стікер"></video>
+    {% elif result.hero_fallback %}
+    <img src="/s/{{ sticker.id }}/files/{{ result.hero_fallback }}" alt="Анімований стікер">
+    {% endif %}
+  </div>
+  <div class="switch" role="group" aria-label="Фон перегляду">
+    <button type="button" data-bg="dark" aria-pressed="true"><span class="swatch dark"></span>Темний</button>
+    <button type="button" data-bg="light" aria-pressed="false"><span class="swatch light"></span>Світлий</button>
+    <button type="button" data-bg="checker" aria-pressed="false"><span class="swatch checker"></span>Шаховий</button>
+  </div>
+  <p class="muted small loop-info">Луп {{ "%.1f"|format(result.duration) }} с, {{ result.frames }} кадрів{% if result.focus == "auto" %}, емоути з фокусом на обличчі{% endif %}.</p>
+</section>
+
+{% if result.emotes %}
+<section class="panel">
+  <h2>Емоути в чаті</h2>
+  <p class="muted small">Справжній розмір 28 px, як їх побачать глядачі.</p>
+  {% for theme in ["dark", "light"] %}
+  <div class="chat {{ theme }}">
+    <span class="who">viewer:</span> ну що, ще одна катка
+    {% for target, name, platform in result.emotes %}
+      {% if name.endswith(".webm") %}
+      <video src="/s/{{ sticker.id }}/files/{{ name }}" autoplay loop muted playsinline title="{{ platform }}"></video>
+      {% else %}
+      <img src="/s/{{ sticker.id }}/files/{{ name }}" alt="{{ platform }}" title="{{ platform }}">
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+  <p class="chat-label">Зліва направо: Twitch, Discord, Telegram.</p>
+</section>
+{% endif %}
+
+<section class="panel">
+  <h2>Файли</h2>
+  {% if result.invalid %}
+  <div class="alert" role="alert"><strong>Є файли поза лімітами</strong>{% for f in result.invalid %}{{ f.name }}: {{ f.problems|join("; ") }}. {% endfor %}</div>
+  {% else %}
+  <p class="muted small">Усі файли пройшли перевірку на ліміти платформ.</p>
+  {% endif %}
+  {% for platform, items in result.groups %}
+  <div class="platform">
+    <div class="platform-head">
+      <h3>{{ platform.title }}</h3>
+      <a class="btn btn-quiet small" href="/s/{{ sticker.id }}/zip/{{ platform.key }}" download>Архів {{ platform.title }}</a>
+    </div>
+    <ul class="files">
+      {% for f in items %}
+      <li>
+        <span class="name">{{ f.title }} {{ f.width }}×{{ f.height }}</span>
+        <a class="get" href="/s/{{ sticker.id }}/files/{{ f.path }}?download=1" download aria-label="Завантажити {{ f.name }}">Завантажити</a>
+        <span class="meta">{{ f.name }}, {{ f.weight }}, {{ "%.1f"|format(f.duration_s) }} с{% if not f.valid %}, <span class="bad">поза лімітом</span>{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+  <a class="btn btn-primary btn-block zip-all" href="/s/{{ sticker.id }}/zip/all" download>Завантажити все разом</a>
+</section>
+{% endif %}
+
+{% include "_publish.html" %}
+
+{% if clips %}
+<section class="panel" id="clips">
+  <h2>Попередні рухи</h2>
+  <p class="muted">Останні {{ clips|length }} згенеровані ролики. «Використати цей рух» переробляє вибраний ролик з декором окремо і готує всі файли заново, без нової генерації і безкоштовно.</p>
+  <ul class="clips">
+    {% for c in clips %}
+    <li class="clip{% if c.current %} is-current{% endif %}">
+      <div class="clip-stage checker-bg">
+        {% if c.preview %}<img src="/s/{{ sticker.id }}/raw/{{ c.id }}/preview.webp" alt="Рух від {{ c.created|date }}" loading="lazy">{% else %}<span class="muted small">Без превʼю</span>{% endif %}
+      </div>
+      <div class="clip-info">
+        <strong>{{ c.created|date }}</strong>
+        <span class="muted small">{% if c.seed is not none %}seed {{ c.seed }}{% else %}seed невідомий{% endif %}{% if c.variant %}, варіант {{ c.variant }}{% endif %}</span>
+        {% if c.prompt %}<details><summary class="small">Опис</summary><p class="prompt-used small">{{ c.prompt }}</p></details>{% endif %}
+      </div>
+      {% if c.current and result %}
+      <span class="muted small">Зараз використовується</span>
+      {% else %}
+      <form method="post" action="/s/{{ sticker.id }}/raw/{{ c.id }}/use">
+        <input type="hidden" name="{{ csrf_field }}" value="{{ csrf }}">
+        <button class="btn btn-quiet small" type="submit">Використати цей рух</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="panel">
+  {% if result %}
+  <h2>Перегенерувати</h2>
+  <p class="muted">Нове відео з тим самим або зміненим описом. Це нова платна генерація.</p>
+  {% else %}
+  <h2>Що робить персонаж</h2>
+  <p class="muted">Залиште опис або перепишіть своїми словами, українською чи англійською.</p>
+  {% endif %}
+  <form method="post" action="/s/{{ sticker.id }}/generate" data-generate>
+    <input type="hidden" name="{{ csrf_field }}" value="{{ csrf }}">
+    <label class="visually-hidden" for="text">Опис дії</label>
+    <textarea id="text" name="text" maxlength="{{ max_text }}" required
+      placeholder="Наприклад: дівчина позіхає, прикриваючи рот кулаком, і повертається у початкову позу">{{ sticker.text }}</textarea>
+    {% if decor_summary %}
+    <label class="check decor-toggle">
+      <input type="checkbox" name="decor_separate" value="1" {% if sticker.decor != "together" %}checked{% endif %}>
+      <span>Анімувати декор окремо <span class="muted small">(знайдено: {{ decor_summary }})</span></span>
+    </label>
+    <p class="muted small">Декор рухається сам по собі, а не разом з головою персонажа. Без позначки декор лишається у відео як частина сцени.</p>
+    {% endif %}
+    <label class="variants-pick" for="variants">Скільки варіантів
+      <select id="variants" name="variants" data-variants>
+        {% for n in variant_choices %}
+        <option value="{{ n }}" data-price="{{ prices[n]|usd }}" {% if n == sticker.variants %}selected{% endif %}>{{ n }} {% if n == 1 %}варіант{% else %}варіанти{% endif %} · {{ prices[n]|usd }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <p class="muted small">Кілька варіантів з різним seed: ви побачите превʼю і виберете рух, який подобається.</p>
+    {% if not budget.can_generate %}
+    <div class="note note-gap">Денний ліміт {{ budget.daily|usd }}: сьогодні витрачено {{ budget.today|usd }}, на генерацію не вистачає. Ліміт оновиться завтра.</div>
+    {% endif %}
+    <div class="actions">
+      <button class="btn btn-primary" type="submit" {% if not budget.can_generate %}disabled{% endif %}>
+        {% if result or state == "interrupted" %}Перегенерувати{% else %}Згенерувати{% endif %}<span data-variants-label>{% if sticker.variants > 1 %} {{ sticker.variants }} варіанти{% endif %}</span> <span class="price" data-price>{{ prices[sticker.variants if sticker.variants in prices else 1]|usd }}</span>
+      </button>
+      <button class="btn btn-quiet" type="submit" form="describe-form" {% if not budget.can_describe %}disabled{% endif %}>Описати ще раз</button>
+    </div>
+  </form>
+  <form id="describe-form" method="post" action="/s/{{ sticker.id }}/describe">
+    <input type="hidden" name="{{ csrf_field }}" value="{{ csrf }}">
+  </form>
+</section>
+{% endif %}
+
+</div>
+
+{% if not sticker.active or state == "queued" %}
+<form method="post" action="/s/{{ sticker.id }}/delete" class="foot" data-confirm="Видалити стікер і всі його файли?">
+  <input type="hidden" name="{{ csrf_field }}" value="{{ csrf }}">
+  {% if published %}
+  <fieldset class="remove-also">
+    <legend>Стікер опубліковано. Прибрати його також з платформ?</legend>
+    {% for channel in published %}
+    <label class="check"><input type="checkbox" name="remove_{{ channel.value }}" value="1"> {{ channel_titles[channel] }}</label>
+    {% endfor %}
+    <p class="muted small">Без галочок стікер лишиться на платформах, видаляться лише файли тут.</p>
+  </fieldset>
+  {% endif %}
+  <button class="btn btn-quiet btn-danger small" type="submit">Видалити стікер</button>
+</form>
+{% endif %}
+{% endblock %}

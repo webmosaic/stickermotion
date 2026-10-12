@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Новий стікер - StickerMotion{% endblock %}
+{% block main %}
+{% set stage = 1 %}{% include "_steps.html" %}
+<h1>Новий стікер</h1>
+<p class="lede">Завантажте персонажа, і сервіс запропонує, що він робитиме. Опис безкоштовний, платна лише генерація.</p>
+{% if error %}<div class="alert" role="alert"><strong>Файл не підходить</strong>{{ error }}</div>{% endif %}
+{% if not budget.can_describe %}
+<div class="alert" role="alert"><strong>Денний ліміт вичерпано</strong>Сьогодні витрачено {{ budget.today|usd }} з {{ budget.daily|usd }}. Нові стікери можна буде робити завтра.</div>
+{% endif %}
+<form method="post" action="/upload" enctype="multipart/form-data" data-upload>
+  <input type="hidden" name="{{ csrf_field }}" value="{{ csrf }}">
+  <div class="drop" data-drop>
+    <input id="file" name="file" type="file" accept="image/png" required aria-describedby="drop-hint">
+    <div>
+      <div class="drop-icon">{% include "_upload_icon.svg" %}</div>
+      <img class="drop-preview checker-bg" alt="Вибраний персонаж" data-preview>
+      <div class="drop-title" data-drop-title>Перетягніть PNG сюди</div>
+      <div class="muted small" id="drop-hint" data-drop-hint>або натисніть, щоб вибрати файл</div>
+    </div>
+  </div>
+  <ul class="hint-list">
+    <li>PNG з прозорим фоном, один персонаж</li>
+    <li>Від 64 до 4096 px по стороні, до {{ max_mb }} МБ</li>
+  </ul>
+  <div class="actions">
+    <button class="btn btn-primary btn-block" type="submit" data-submit {% if not budget.can_describe %}disabled{% endif %}>Завантажити й описати</button>
+  </div>
+</form>
+{% endblock %}

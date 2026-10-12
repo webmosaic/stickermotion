@@ -1,0 +1,7 @@
+{# stage: 1 character, 2 description, 3 generation, 4 files #}
+<ol class="steps" aria-label="Кроки">
+  {% for label in ["Персонаж", "Опис дії", "Генерація", "Файли"] %}
+  <li class="{% if loop.index < stage %}done{% elif loop.index == stage %}current{% endif %}"
+      {% if loop.index == stage %}aria-current="step"{% endif %}>{{ label }}</li>
+  {% endfor %}
+</ol>
